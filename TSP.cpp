@@ -621,7 +621,7 @@ void init_gene(Individual_sate Individual[])
     {
         //typesetをシャッフル
         shuffle(typeset, 279);
-        for (j = 0; j < 280; j++)
+        for (j = 2; j <= 280; j++)
         {
             //シャッフルしたタイプセットの値をコピー
             Individual[i].gene[j] = typeset[j];
@@ -637,14 +637,7 @@ main()
     Individual_sate Individual[NO_OF_INDIVIDUAL];
     Individual_sate Individual_next[NO_OF_INDIVIDUAL];
     init_gene(Individual);
-    printf("checkpoint\n");
-    printf("----------------------------------------\n");
-    i = 0;
-    for (i = 1; i <= 281; i++)
-    {
-        printf("%d \n", Individual[1].gene[i]);
-    }
-    printf("----------------------------------------\n");
+    
     init_city(city);
     printf("%d", city[1].x);
 }
