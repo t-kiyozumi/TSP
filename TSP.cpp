@@ -14,9 +14,10 @@
 using namespace std;
 
 #define NO_OF_INDIVIDUAL 200
-#define ELITE_RATE 0.6
-#define FINAL_GENERATION 1500
-#define MUTATION_RATE 0.003;
+#define ELITE_RATE 0.4
+#define FINAL_GENERATION 7000
+#define NO_OF_MUTATION 5
+#define MUTATION_RATE 0.03
 
 class generation_state
 {
@@ -657,6 +658,7 @@ void calc_distance(Individual_sate individual[], int size, city_state city[])
         }
     }
 }
+
 void cross_individual(Individual_sate Individual[], Individual_sate Individual_next[])
 {
 
@@ -708,9 +710,59 @@ int cmp(const void *p, const void *q)
     return ((Individual_sate *)p)->distance - ((Individual_sate *)q)->distance;
 }
 
-void muation()
+void shuffle_muation(Individual_sate Individual[])
 {
+    int i, j;
+    //NO_OF_MUTIRATION個の遺伝子をランダムに選ぶ
+    int index[NO_OF_MUTATION];
+    //ランダムに3つの遺伝子を選ぶ
+    for (size_t i = 0; i < NO_OF_MUTATION; i++)
+    {
+        index[i] = rand() % (NO_OF_INDIVIDUAL - 1) + 1;
+    }
 
+    int typeset[279] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280};
+
+    shuffle(typeset, 279);
+    for (i = 1; i <= NO_OF_MUTATION; i++)
+    {
+        for (j = 2; j <= 280; j++)
+        {
+            //シャッフルしたタイプセットの値をコピー
+            Individual[index[i]].gene[j] = typeset[j];
+        }
+    }
+}
+
+void inversion_muation(Individual_sate Individual[])
+{
+    //逆位突然変異
+    //二個の染色体をランダムに選択し入れ替える
+    int i, j;
+    int cache[282];
+    int index1 = rand() % (280 - 2) + 2;
+    int index2 = rand() % (280 - 2) + 2;
+
+    //NO_OF_MUTIRATION個の遺伝子をランダムに選ぶ
+    int index[NO_OF_MUTATION + 1];
+
+    for (size_t i = 1; i <= NO_OF_MUTATION; i++)
+    {
+        index[i] = rand() % (NO_OF_INDIVIDUAL - 1) + 1;
+    }
+
+    for (i = 1; i <= NO_OF_MUTATION; i++)
+    {
+        index1 = rand() % (280 - 2) + 2;
+        index2 = rand() % (280 - 2) + 2;
+        for (j = 1; j <= 281; j++)
+        {
+            cache[j] = Individual[index[i]].gene[j];
+        }
+
+        Individual[index[i]].gene[index1] = cache[index2];
+        Individual[index[i]].gene[index2] = cache[index1];
+    }
 }
 
 int main()
@@ -726,6 +778,8 @@ int main()
     ///////////////////実験データ記録ファイルのための準備//////////////////////////////////////////
     FILE *Grec;
     Grec = fopen("geneticRec.txt", "w");
+    fprintf(Grec,"generation,eletes_distance\n");
+
 
     /////////////////都市の配置・初代遺伝子の決定などの初期設定//////////////////////////////////
     init_city(city);
@@ -737,7 +791,10 @@ int main()
     while (1)
     {
         //------------------------突然変異-----------------------------------------------
-        
+        //ランダムにNO_OF_MUTIRATION個の遺伝子を選んで逆位変異させる
+        inversion_muation(Individual);
+        //優秀な順番に並び替え
+        sort(Individual_next, end(Individual_next), [](const auto &L, const auto &R) { return R.distance > L.distance; });
 
         //------------------------交配・自然淘汰-----------------------------------------
         //次世代を製造する,但し親に選ばれるのは上位50%(ELITE_RATE%)の個体のみである。
@@ -758,7 +815,7 @@ int main()
         }
 
         //--------------------------この世代の情報を記録------------------------------------
-        fprintf(Grec, "%d,%f \n", i, Individual[1].distance);
+        fprintf(Grec, "%d,%f \n", generation, Individual[1].distance);
         printf("generation : %d, elete_distance : %f \n", generation, Individual[1].distance);
 
         //最終世代に到達したら終了
