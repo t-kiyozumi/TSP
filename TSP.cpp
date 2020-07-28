@@ -9,8 +9,21 @@
 #include <stdlib.h>
 #include <string>
 #include <sys/time.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
 
-#define NO_OF_INDIVIDUAL 100
+#define NO_OF_INDIVIDUAL 200
+#define ELITE_RATE 0.6
+#define FINAL_GENERATION 1500
+#define MUTATION_RATE 0.003;
+
+class generation_state
+{
+public:
+    int population;
+    double highscore;
+};
 
 class Individual_sate
 {
@@ -620,7 +633,6 @@ void init_gene(Individual_sate Individual[])
     for (i = 1; i <= NO_OF_INDIVIDUAL; i++)
     {
         //typesetをシャッフル
-        srand(time(NULL));
         shuffle(typeset, 279);
         for (j = 2; j <= 280; j++)
         {
@@ -637,35 +649,126 @@ void calc_distance(Individual_sate individual[], int size, city_state city[])
 
     for (j = 1; j <= NO_OF_INDIVIDUAL; j++)
     {
+        individual[j].distance = 0;
         for (i = 1; i < size; i++)
         {
             individual[j].distance =
-                sqrt(abs(pow(city[individual[j].gene[i+1]].x - city[individual[j].gene[i]].x, 2) - pow(city[individual[j].gene[i+1]].y - city[individual[j].gene[i]].y, 2))) + individual[j].distance;
+                sqrt(abs(pow(city[individual[j].gene[i + 1]].x - city[individual[j].gene[i]].x, 2) - pow(city[individual[j].gene[i + 1]].y - city[individual[j].gene[i]].y, 2))) + individual[j].distance;
         }
     }
-    
+}
+void cross_individual(Individual_sate Individual[], Individual_sate Individual_next[])
+{
+
+    int i;
+    int j;
+    int mother_index;
+    int father_index;
+    int heredity_index;
+
+    for (j = 1; j <= NO_OF_INDIVIDUAL; j = j + 2)
+    {
+
+        //ランダムに父親と母親を選ぶ
+        //但し親に選ばれるのは上位50(ELITE_RATE)%の個体のみである
+        mother_index = (rand() % (int)(NO_OF_INDIVIDUAL * ELITE_RATE - 1)) + 1;
+        while (1)
+        {
+            // printf("loop!!");
+            father_index = (rand() % (int)(NO_OF_INDIVIDUAL * ELITE_RATE - 1)) + 1;
+            if (mother_index != father_index)
+            {
+                break;
+            }
+        }
+
+        //ランダムに遺伝子に切れ目を入れる
+        heredity_index = rand() % 280 + 1;
+
+        //子供の左側の遺伝子を作る
+        //j番目の子供に父親の左側の遺伝子を遺伝させる。
+        //j+1番目の子供に母親の左側の遺伝子を遺伝させる。
+        for (i = 1; i < heredity_index; i++)
+        {
+            Individual_next[j].gene[i] = Individual[father_index].gene[i];
+            Individual_next[j + 1].gene[i] = Individual[mother_index].gene[i];
+        }
+        //j番目の子供母親の右側の遺伝子を遺伝させる]
+        //j+1番目の子供に父親の右側の遺伝子を遺伝させる
+        for (i = heredity_index; i <= 281; i++)
+        {
+            Individual_next[j].gene[i] = Individual[mother_index].gene[i];
+            Individual_next[j + 1].gene[i] = Individual[father_index].gene[i];
+        }
+    }
+}
+
+int cmp(const void *p, const void *q)
+{
+    return ((Individual_sate *)p)->distance - ((Individual_sate *)q)->distance;
+}
+
+void muation()
+{
+
 }
 
 int main()
 {
+    srand(time(NULL));
     printf("checkpoint\n");
     int i;
+    int j;
+    int generation = 1;
     city_state city[281];
-    Individual_sate Individual[NO_OF_INDIVIDUAL];
-    Individual_sate Individual_next[NO_OF_INDIVIDUAL+1];
+    Individual_sate Individual[NO_OF_INDIVIDUAL + 1];
+    Individual_sate Individual_next[NO_OF_INDIVIDUAL + 1];
+    ///////////////////実験データ記録ファイルのための準備//////////////////////////////////////////
+    FILE *Grec;
+    Grec = fopen("geneticRec.txt", "w");
+
+    /////////////////都市の配置・初代遺伝子の決定などの初期設定//////////////////////////////////
     init_city(city);
-    printf("checkpoint\n");
-
     init_gene(Individual);
-    
     calc_distance(Individual, 281, city);
+    //優秀な順番に並び替え
+    sort(Individual, end(Individual), [](const auto &L, const auto &R) { return R.distance > L.distance; });
 
+    while (1)
+    {
+        //------------------------突然変異-----------------------------------------------
+        
 
-    printf("checkpoint\n");
+        //------------------------交配・自然淘汰-----------------------------------------
+        //次世代を製造する,但し親に選ばれるのは上位50%(ELITE_RATE%)の個体のみである。
 
-    printf("indubial[1].distance = %f\n", Individual[1].distance);
-    printf("indubial[100].distance = %f\n", Individual[NO_OF_INDIVIDUAL].distance);
+        cross_individual(Individual, Individual_next);
+        calc_distance(Individual_next, 281, city);
+        //優秀な順番に並び替え
+        sort(Individual_next, end(Individual_next), [](const auto &L, const auto &R) { return R.distance > L.distance; });
 
-    printf("%d", city[1].x);
+        //--------------------------世代交代----------------------------------------------
+        for (i = 0; i <= NO_OF_INDIVIDUAL; i++)
+        {
+            for (j = 0; j <= 281; j++)
+            {
+                Individual[i].gene[j] = Individual_next[i].gene[j];
+                Individual[i].distance = Individual_next[i].distance;
+            }
+        }
+
+        //--------------------------この世代の情報を記録------------------------------------
+        fprintf(Grec, "%d,%f \n", i, Individual[1].distance);
+        printf("generation : %d, elete_distance : %f \n", generation, Individual[1].distance);
+
+        //最終世代に到達したら終了
+        if (generation == FINAL_GENERATION)
+        {
+            break;
+        }
+        generation++;
+    }
+
+    printf("reached final generation \n simulation is finished\n");
     return 0;
 }
